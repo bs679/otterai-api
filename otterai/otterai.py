@@ -1,8 +1,8 @@
 import json
+import os
 import xml.etree.ElementTree as ET
 
 import requests
-from requests_toolbelt.multipart.encoder import MultipartEncoder
 
 from .exceptions import OtterAIException
 
@@ -45,6 +45,47 @@ class OtterAI:
         self._cookies = response.cookies.get_dict()
 
         return self._handle_response(response)
+
+    def save_session(self, path):
+        """Persist login state (userid + cookies) to a JSON file so later runs
+        can call load_session() instead of logging in again. Repeated logins
+        can trip Otter's rate limiting / captcha, so unattended consumers
+        should reuse a session for as long as it stays valid."""
+        state = {
+            "userid": self._userid,
+            "cookies": requests.utils.dict_from_cookiejar(self._session.cookies),
+        }
+        with open(path, "w") as f:
+            json.dump(state, f)
+        try:
+            os.chmod(path, 0o600)
+        except OSError:
+            pass
+
+    def load_session(self, path):
+        """Restore state saved by save_session(). Returns True when a userid
+        and cookies were loaded (the session may still have expired server
+        side; verify with is_session_valid() or any authenticated call)."""
+        try:
+            with open(path) as f:
+                state = json.load(f)
+        except (OSError, ValueError):
+            return False
+        if not state.get("userid"):
+            return False
+        self._userid = str(state["userid"])
+        self._cookies = state.get("cookies") or {}
+        self._session.cookies.update(self._cookies)
+        return True
+
+    def is_session_valid(self):
+        """Cheap server-side probe of the current session: True when the user
+        endpoint answers 200 with a userid."""
+        response = self.get_user()
+        if response.get("status") != 200:
+            return False
+        data = response.get("data") or {}
+        return bool(data.get("userid") or (data.get("user") or {}).get("id"))
 
     def get_user(self):
         user_url = OtterAI.API_BASE_URL + "user"
@@ -91,6 +132,21 @@ class OtterAI:
 
         return self._handle_response(response)
 
+    def get_speech_transcript(self, speech_id):
+        """Full transcript segments for a speech (the data behind the
+        "View in Otter" link; not included in get_speech / the summary
+        email). The response's data carries a "transcripts" list; each
+        segment has the spoken text plus offsets and a speaker reference."""
+        transcript_url = OtterAI.API_BASE_URL + "transcripts"
+        if self._is_userid_invalid():
+            raise OtterAIException("userid is invalid")
+
+        payload = {"userid": self._userid, "otid": speech_id}
+
+        response = self._session.get(transcript_url, params=payload)
+
+        return self._handle_response(response)
+
     def query_speech(self, query, speech_id, size=500):
         query_speech_url = OtterAI.API_BASE_URL + "advanced_search"
 
@@ -101,6 +157,9 @@ class OtterAI:
         return self._handle_response(response)
 
     def upload_speech(self, file_name, content_type="audio/mp4"):
+        # Imported here so read-only consumers do not need requests_toolbelt.
+        from requests_toolbelt.multipart.encoder import MultipartEncoder
+
         speech_upload_params_url = OtterAI.API_BASE_URL + "speech_upload_params"
         speech_upload_prod_url = OtterAI.S3_BASE_URL + "speech-upload-prod"
         finish_speech_upload = OtterAI.API_BASE_URL + "finish_speech_upload"
