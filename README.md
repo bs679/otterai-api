@@ -35,6 +35,19 @@ otter = OtterAI()
 otter.login('USERNAME', 'PASSWORD')
 ```
 
+### Session persistence
+
+Unattended consumers should not log in on every run (repeated logins can
+trip Otter's rate limiting). Save the session once and reuse it until it
+expires:
+
+```python
+otter = OtterAI()
+if not (otter.load_session('session.json') and otter.is_session_valid()):
+    otter.login('USERNAME', 'PASSWORD')
+    otter.save_session('session.json')
+```
+
 ## APIs
 
 ### User
@@ -59,6 +72,12 @@ Get speech by id
 
 ```python
 otter.get_speech(SPEECH_ID)
+```
+
+Get the full transcript of a speech (the segments behind "View in Otter")
+
+```python
+otter.get_speech_transcript(SPEECH_ID)
 ```
 
 Query a speech
