@@ -11,4 +11,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "pytest-cov", "black"]
+mcp = ["mcp>=1.2.0"]
+dev = ["pytest", "pytest-cov", "black", "mcp>=1.2.0"]
+
+[project.scripts]
+otterai-mcp = "otterai_mcp.server:main"
+
+[tool.setuptools]
+packages = ["otterai", "otterai_mcp"]
