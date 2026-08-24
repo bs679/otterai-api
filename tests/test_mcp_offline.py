@@ -198,6 +198,38 @@ def test_expired_session_resets_client():
     assert server._client is None
 
 
+def test_persist_session_with_basename_path(monkeypatch, tmp_path):
+    """A bare filename (empty dirname) must still be saved, not skipped."""
+    monkeypatch.chdir(tmp_path)
+    otter = OtterAI()
+    otter._userid = "user-1"
+
+    server._persist_session(otter, "session.json")
+
+    assert (tmp_path / "session.json").exists()
+    restored = OtterAI()
+    assert restored.load_session(str(tmp_path / "session.json")) is True
+    assert restored._userid == "user-1"
+
+
+def test_persist_session_creates_parent_directory(tmp_path):
+    otter = OtterAI()
+    otter._userid = "user-1"
+    path = tmp_path / "nested" / "dir" / "session.json"
+
+    server._persist_session(otter, str(path))
+
+    assert path.exists()
+
+
+def test_export_tool_annotations_flag_destructive_overwrite():
+    read_only = server._annotations("x")
+    export = server._annotations("x", read_only=False)
+    assert read_only.destructive_hint is False
+    assert export.read_only_hint is False
+    assert export.destructive_hint is True
+
+
 def test_get_user_markdown():
     user = {"user": {"name": "Dave", "email": "dave@example.com", "id": "user-1"}}
     stub_client([StubResponse(200, user)])

@@ -86,14 +86,21 @@ def get_client() -> OtterAI:
                 "may mean Otter is rate limiting logins; wait before retrying."
             )
 
-        try:
-            os.makedirs(os.path.dirname(session_file), exist_ok=True)
-            otter.save_session(session_file)
-        except OSError:
-            pass  # session persistence is best effort
+        _persist_session(otter, session_file)
 
         _client = otter
         return _client
+
+
+def _persist_session(otter: OtterAI, session_file: str) -> None:
+    """Best-effort save of the login session for reuse by later runs."""
+    try:
+        session_dir = os.path.dirname(session_file)
+        if session_dir:
+            os.makedirs(session_dir, exist_ok=True)
+        otter.save_session(session_file)
+    except OSError:
+        pass
 
 
 def _reset_client() -> None:
@@ -391,10 +398,13 @@ class ExportRecordingInput(BaseModel):
 
 
 def _annotations(title: str, read_only: bool = True) -> ToolAnnotations:
+    # The only non-read-only tool (export) writes to a predictable local
+    # path and overwrites an existing file there, so it is flagged
+    # destructive to let clients apply their confirmation flow.
     return ToolAnnotations(
         title=title,
         readOnlyHint=read_only,
-        destructiveHint=False,
+        destructiveHint=not read_only,
         idempotentHint=True,
         openWorldHint=True,
     )
