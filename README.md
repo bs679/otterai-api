@@ -6,6 +6,7 @@ Unofficial Python API for [otter.ai](http://otter.ai)
 
 -   [Installation](#installation)
 -   [Setup](#setup)
+-   [MCP connector](#mcp-connector)
 -   [APIs](#apis)
     -   [User](#user)
     -   [Speeches](#speeches)
@@ -47,6 +48,66 @@ if not (otter.load_session('session.json') and otter.is_session_valid()):
     otter.login('USERNAME', 'PASSWORD')
     otter.save_session('session.json')
 ```
+
+## MCP connector
+
+The repository ships an [MCP](https://modelcontextprotocol.io) server
+(`otterai_mcp`) so MCP clients such as Claude Code and Claude Desktop can
+access your Otter recordings, summaries and transcripts directly.
+
+Install with the `mcp` extra:
+
+```bash
+pip install '.[mcp]'
+```
+
+Credentials come from the environment (a `.env` file also works):
+
+-   `OTTERAI_USERNAME` / `OTTERAI_PASSWORD` — your Otter.ai login
+-   `OTTERAI_SESSION_FILE` — optional; where the login session is cached
+    (default `~/.otterai/session.json`). The server reuses a saved session
+    across runs and only logs in when it has expired, which avoids
+    tripping Otter's login rate limiting.
+
+Register with Claude Code:
+
+```bash
+claude mcp add otterai \
+    -e OTTERAI_USERNAME=you@example.com \
+    -e OTTERAI_PASSWORD=... \
+    -- otterai-mcp
+```
+
+or add it to Claude Desktop's `claude_desktop_config.json`:
+
+```json
+{
+    "mcpServers": {
+        "otterai": {
+            "command": "otterai-mcp",
+            "env": {
+                "OTTERAI_USERNAME": "you@example.com",
+                "OTTERAI_PASSWORD": "..."
+            }
+        }
+    }
+}
+```
+
+(`python -m otterai_mcp` is equivalent to the `otterai-mcp` entry point.)
+
+Tools exposed:
+
+| Tool                        | Description                                             |
+| --------------------------- | ------------------------------------------------------- |
+| `otterai_get_current_user`  | Account info / auth check                               |
+| `otterai_list_recordings`   | List recordings with ids, dates and summary snippets    |
+| `otterai_get_recording`     | Full metadata, speakers and summary of one recording    |
+| `otterai_get_summary`       | Just the summary of one recording                       |
+| `otterai_get_transcript`    | Full transcript with speaker names and timestamps       |
+| `otterai_search_recording`  | Search for text within one recording                    |
+| `otterai_list_folders`      | List folders (ids usable in `otterai_list_recordings`)  |
+| `otterai_export_recording`  | Download a recording export (txt/pdf/mp3/docx/srt/zip)  |
 
 ## APIs
 
