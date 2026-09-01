@@ -86,9 +86,17 @@ def get_client() -> OtterAI:
             )
 
         response = otter.login(username, password)
-        if response.get("status") != 200:
+        # A 200 without a userid is Otter's captcha / rate-limit challenge;
+        # caching or persisting that client would poison every later call.
+        if response.get("status") != 200 or otter._is_userid_invalid():
+            detail = (
+                "no userid in the response — Otter may be serving a captcha "
+                "or rate-limit challenge"
+                if response.get("status") == 200
+                else f"status {response.get('status')}"
+            )
             raise OtterAIException(
-                f"Login to Otter.ai failed with status {response.get('status')}. "
+                f"Login to Otter.ai failed ({detail}). "
                 "Check OTTERAI_USERNAME / OTTERAI_PASSWORD. Repeated failures "
                 "may mean Otter is rate limiting logins; wait before retrying."
             )
