@@ -41,7 +41,10 @@ class OtterAI:
         if response.status_code != requests.codes.ok:
             return self._handle_response(response)
 
-        self._userid = response.json()["userid"]
+        # A 200 without a userid happens when Otter serves a captcha /
+        # challenge page (e.g. under rate limiting); leave _userid unset so
+        # authenticated calls raise "userid is invalid" instead of crashing.
+        self._userid = response.json().get("userid")
         self._cookies = response.cookies.get_dict()
 
         return self._handle_response(response)

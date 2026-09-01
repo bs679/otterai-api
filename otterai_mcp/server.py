@@ -27,8 +27,15 @@ from dotenv import load_dotenv
 
 try:  # mcp SDK >= 2.0
     from mcp.server import MCPServer as _ServerClass
-except ImportError:  # mcp SDK 1.x
-    from mcp.server.fastmcp import FastMCP as _ServerClass
+except ImportError:
+    try:  # mcp SDK 1.x
+        from mcp.server.fastmcp import FastMCP as _ServerClass
+    except ImportError as exc:
+        raise ImportError(
+            "The 'mcp' package is required for the MCP connector. "
+            "Install it with: pip install 'otterai-api[mcp]' "
+            "(or: uv pip install '.[mcp]')"
+        ) from exc
 from mcp.types import ToolAnnotations
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -161,14 +168,14 @@ def _format_timestamp(epoch: Any) -> str:
         return datetime.fromtimestamp(int(epoch), tz=timezone.utc).strftime(
             "%Y-%m-%d %H:%M UTC"
         )
-    except TypeError, ValueError, OSError, OverflowError:
+    except (TypeError, ValueError, OSError, OverflowError):
         return "unknown"
 
 
 def _format_duration(seconds: Any) -> str:
     try:
         seconds = int(seconds)
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         return "unknown"
     minutes, secs = divmod(seconds, 60)
     hours, minutes = divmod(minutes, 60)
@@ -182,7 +189,7 @@ def _format_duration(seconds: Any) -> str:
 def _format_offset(milliseconds: Any) -> str:
     try:
         total_seconds = int(milliseconds) // 1000
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         return "?"
     minutes, secs = divmod(total_seconds, 60)
     hours, minutes = divmod(minutes, 60)

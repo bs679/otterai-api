@@ -1,6 +1,7 @@
 import os
 
 import pytest
+import requests
 from dotenv import load_dotenv
 
 from otterai.otterai import OtterAI, OtterAIException
@@ -11,10 +12,27 @@ load_dotenv()
 
 @pytest.fixture
 def logged_in_otter():
+    """Live-credential fixture: tests using it need OTTERAI_USERNAME /
+    OTTERAI_PASSWORD (env or .env) and network access to otter.ai.
+    Without both, those tests skip instead of erroring, so the offline
+    suite stays green in CI."""
     username = os.getenv("OTTERAI_USERNAME")
     password = os.getenv("OTTERAI_PASSWORD")
+    if not username or not password:
+        pytest.skip("OTTERAI_USERNAME / OTTERAI_PASSWORD not set")
     otter = OtterAI()
-    otter.login(username, password)
+    try:
+        response = otter.login(username, password)
+    except requests.exceptions.RequestException as exc:
+        pytest.skip(f"otter.ai unreachable: {exc}")
+    # Credentials were provided, so a rejected login is a real failure the
+    # suite must report, not skip past.
+    if response.get("status") != 200 or otter._is_userid_invalid():
+        pytest.fail(
+            f"otter.ai login failed (status {response.get('status')}); "
+            "check OTTERAI_USERNAME / OTTERAI_PASSWORD, or Otter may be "
+            "rate limiting logins"
+        )
     return otter
 
 
