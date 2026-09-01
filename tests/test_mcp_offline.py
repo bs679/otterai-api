@@ -54,6 +54,24 @@ def test_requires_credentials_when_no_session():
     assert "OTTERAI_USERNAME" in result
 
 
+def test_get_client_rejects_challenge_login(monkeypatch):
+    """A 200 login response without a userid (Otter's captcha / rate-limit
+    challenge) must fail loudly and must not be cached as an authenticated
+    client, or every later call would reuse the poisoned client."""
+    monkeypatch.setenv("OTTERAI_USERNAME", "user@example.com")
+    monkeypatch.setenv("OTTERAI_PASSWORD", "pw")
+
+    class ChallengeOtter(OtterAI):
+        def __init__(self):
+            super().__init__()
+            self._session = StubSession([StubResponse(200, {"challenge": "captcha"})])
+
+    monkeypatch.setattr(server, "OtterAI", ChallengeOtter)
+    with pytest.raises(server.OtterAIException, match="captcha"):
+        server.get_client()
+    assert server._client is None
+
+
 def test_list_recordings_markdown():
     stub_client([StubResponse(200, {"speeches": [SPEECH], "end_of_list": True})])
 

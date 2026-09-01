@@ -1,18 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "otterai-api"
 version = "0.1.0"
-description = "Add your description here"
+description = "Unofficial Otter.ai Python API with MCP connector"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.10"
 dependencies = [
+    "mcp>=1.2.0",
     "python-dotenv>=1.2.1",
     "requests",
     "requests_toolbelt",
 ]
 
 [project.optional-dependencies]
-mcp = ["mcp>=1.2.0"]
-dev = ["pytest", "pytest-cov", "black", "mcp>=1.2.0"]
+# mcp is now a core dependency; the empty extra keeps
+# `pip install 'otterai-api[mcp]'` working for existing setups.
+mcp = []
+dev = ["pytest", "pytest-cov", "black"]
 
 [project.scripts]
 otterai-mcp = "otterai_mcp.server:main"

@@ -16,6 +16,7 @@ class StubResponse:
     def __init__(self, status_code=200, data=None):
         self.status_code = status_code
         self._data = data if data is not None else {}
+        self.cookies = requests.cookies.cookiejar_from_dict({})
 
     def json(self):
         return self._data

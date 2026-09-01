@@ -27,8 +27,15 @@ from dotenv import load_dotenv
 
 try:  # mcp SDK >= 2.0
     from mcp.server import MCPServer as _ServerClass
-except ImportError:  # mcp SDK 1.x
-    from mcp.server.fastmcp import FastMCP as _ServerClass
+except ImportError:
+    try:  # mcp SDK 1.x
+        from mcp.server.fastmcp import FastMCP as _ServerClass
+    except ImportError as exc:
+        raise ImportError(
+            "The 'mcp' package is required for the MCP connector but is not "
+            "installed. Reinstall the project (mcp is a core dependency): "
+            "pip install otterai-api  (or: uv pip install .)"
+        ) from exc
 from mcp.types import ToolAnnotations
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -79,9 +86,17 @@ def get_client() -> OtterAI:
             )
 
         response = otter.login(username, password)
-        if response.get("status") != 200:
+        # A 200 without a userid is Otter's captcha / rate-limit challenge;
+        # caching or persisting that client would poison every later call.
+        if response.get("status") != 200 or otter._is_userid_invalid():
+            detail = (
+                "no userid in the response — Otter may be serving a captcha "
+                "or rate-limit challenge"
+                if response.get("status") == 200
+                else f"status {response.get('status')}"
+            )
             raise OtterAIException(
-                f"Login to Otter.ai failed with status {response.get('status')}. "
+                f"Login to Otter.ai failed ({detail}). "
                 "Check OTTERAI_USERNAME / OTTERAI_PASSWORD. Repeated failures "
                 "may mean Otter is rate limiting logins; wait before retrying."
             )
@@ -161,14 +176,14 @@ def _format_timestamp(epoch: Any) -> str:
         return datetime.fromtimestamp(int(epoch), tz=timezone.utc).strftime(
             "%Y-%m-%d %H:%M UTC"
         )
-    except TypeError, ValueError, OSError, OverflowError:
+    except (TypeError, ValueError, OSError, OverflowError):
         return "unknown"
 
 
 def _format_duration(seconds: Any) -> str:
     try:
         seconds = int(seconds)
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         return "unknown"
     minutes, secs = divmod(seconds, 60)
     hours, minutes = divmod(minutes, 60)
@@ -182,7 +197,7 @@ def _format_duration(seconds: Any) -> str:
 def _format_offset(milliseconds: Any) -> str:
     try:
         total_seconds = int(milliseconds) // 1000
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         return "?"
     minutes, secs = divmod(total_seconds, 60)
     hours, minutes = divmod(minutes, 60)

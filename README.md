@@ -55,10 +55,10 @@ The repository ships an [MCP](https://modelcontextprotocol.io) server
 (`otterai_mcp`) so MCP clients such as Claude Code and Claude Desktop can
 access your Otter recordings, summaries and transcripts directly.
 
-Install with the `mcp` extra:
+The `mcp` SDK is a core dependency, so a normal install is all it takes:
 
 ```bash
-pip install '.[mcp]'
+pip install .
 ```
 
 Credentials come from the environment (a `.env` file also works):
