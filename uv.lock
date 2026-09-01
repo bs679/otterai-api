@@ -639,6 +639,7 @@ name = "otterai-api"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "mcp" },
     { name = "python-dotenv" },
     { name = "requests" },
     { name = "requests-toolbelt" },
@@ -647,19 +648,14 @@ dependencies = [
 [package.optional-dependencies]
 dev = [
     { name = "black" },
-    { name = "mcp" },
     { name = "pytest" },
     { name = "pytest-cov" },
-]
-mcp = [
-    { name = "mcp" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "black", marker = "extra == 'dev'" },
-    { name = "mcp", marker = "extra == 'dev'", specifier = ">=1.2.0" },
-    { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.2.0" },
+    { name = "mcp", specifier = ">=1.2.0" },
     { name = "pytest", marker = "extra == 'dev'" },
     { name = "pytest-cov", marker = "extra == 'dev'" },
     { name = "python-dotenv", specifier = ">=1.2.1" },

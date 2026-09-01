@@ -32,9 +32,9 @@ except ImportError:
         from mcp.server.fastmcp import FastMCP as _ServerClass
     except ImportError as exc:
         raise ImportError(
-            "The 'mcp' package is required for the MCP connector. "
-            "Install it with: pip install 'otterai-api[mcp]' "
-            "(or: uv pip install '.[mcp]')"
+            "The 'mcp' package is required for the MCP connector but is not "
+            "installed. Reinstall the project (mcp is a core dependency): "
+            "pip install otterai-api  (or: uv pip install .)"
         ) from exc
 from mcp.types import ToolAnnotations
 from pydantic import BaseModel, ConfigDict, Field
