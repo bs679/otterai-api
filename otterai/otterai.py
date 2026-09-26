@@ -34,9 +34,16 @@ class OtterAI:
 
         payload = {"username": username}
 
-        self._session.auth = (username, password)
-
-        response = self._session.get(auth_url, params=payload)
+        # Basic auth on THIS request only. Setting self._session.auth made
+        # requests attach the password to every later call; Otter now answers
+        # those data calls (user, speeches, ...) with 401 even though the
+        # login itself returns 200 with a userid, and the session dies with
+        # them (GUPPI pipeline, every poll since 2026-09-14). Authenticated
+        # calls ride the session cookies from this response, the way the
+        # Otter web app and other working clients do it.
+        self._session.auth = None
+        response = self._session.get(auth_url, params=payload,
+                                     auth=(username, password))
 
         if response.status_code != requests.codes.ok:
             return self._handle_response(response)
