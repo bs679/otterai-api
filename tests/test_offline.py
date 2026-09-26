@@ -30,8 +30,8 @@ class StubSession:
         self.calls = []
         self.cookies = requests.cookies.cookiejar_from_dict({})
 
-    def get(self, url, params=None):
-        self.calls.append({"url": url, "params": params or {}})
+    def get(self, url, params=None, auth=None):
+        self.calls.append({"url": url, "params": params or {}, "auth": auth})
         return self.responses.pop(0)
 
 
@@ -98,3 +98,19 @@ def test_is_session_valid_false_on_401():
     otter = OtterAI()
     otter._session = StubSession([StubResponse(401, {})])
     assert otter.is_session_valid() is False
+
+
+def test_login_sends_basic_auth_on_the_login_request_only():
+    """The password must not ride later calls: Otter 401s data requests
+    that carry Basic auth, which killed every session (2026-09-14 onward)."""
+    otter = OtterAI()
+    stub = StubSession([StubResponse(200, {"userid": "user-1"}),
+                        StubResponse(200, {"speeches": []})])
+    stub.auth = ("stale", "creds")      # a leftover session-wide auth is cleared
+    otter._session = stub
+    otter.login("dave@example.org", "pw")
+    assert stub.calls[0]["auth"] == ("dave@example.org", "pw")
+    assert stub.auth is None
+    otter.get_speeches()
+    assert stub.calls[1]["auth"] is None
+    assert otter._userid == "user-1"
